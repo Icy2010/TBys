@@ -190,6 +190,12 @@ func (this *TLuaHttpClient) Download(L *lua.LState) int {
 	return 1
 }
 
+func (this *TLuaHttpClient) Proxy(L *lua.LState) int {
+	res := this.http.Proxy(L.ToString(1)) == nil
+	L.Push(lua.LBool(res))
+	return 1
+}
+
 func HttpClientPreload(L *lua.LState) {
 	L.PreloadModule("httpClient", func(L *lua.LState) int {
 		HttpClient := &TLuaHttpClient{http: NewHTTP(nil)}
@@ -205,6 +211,7 @@ func HttpClientPreload(L *lua.LState) {
 			`getHeader`: HttpClient.GetHeader,
 			`hasHeader`: HttpClient.HasHeader,
 			`gZip`:      HttpClient.GZip,
+			`proxy`:     HttpClient.Proxy,
 		})
 
 		L.Push(t)

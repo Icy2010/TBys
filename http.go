@@ -358,3 +358,9 @@ func (this *THttp) Upload(url string, FileName string, Form map[string]any) ([]b
 func (this *THttp) Header() map[string]string {
 	return this.headers
 }
+
+func (this *THttp) Proxy(ProxyUrl string) error {
+	var err error
+	this.client, err = GetProxyClient(ProxyUrl)
+	return err
+}
