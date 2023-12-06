@@ -13,6 +13,7 @@ require (
 	github.com/fatih/color v1.16.0
 	github.com/glebarez/sqlite v1.10.0
 	github.com/go-ini/ini v1.67.0
+	github.com/go-resty/resty/v2 v2.10.0
 	github.com/layeh/gopher-json v0.0.0-20201124131017-552bb3c4c3bf
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/tidwall/gjson v1.17.0
@@ -47,9 +48,9 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/u2takey/go-utils v0.3.1 // indirect
-	golang.org/x/crypto v0.12.0 // indirect
+	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8 // indirect
-	golang.org/x/net v0.14.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.14.0 // indirect
 	gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc // indirect
 	modernc.org/libc v1.22.5 // indirect

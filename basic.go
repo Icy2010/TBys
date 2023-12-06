@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/glebarez/sqlite"
+	"github.com/go-resty/resty/v2"
 	"github.com/tidwall/gjson"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/sqlserver"
@@ -808,4 +809,20 @@ func RandSleep(seed uint) {
 	}
 
 	time.Sleep(time.Duration(n) * time.Second)
+}
+
+func NewHTTPRequest() *resty.Request {
+	res := resty.New().R()
+
+	res.SetHeader("User-Agent", "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0")
+	res.SetHeader("Connection", "keep-alive")
+	res.SetHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
+	res.SetHeader("User-Agent", "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0")
+	res.SetHeader("Accept-Encoding", "gzip, deflate, br")
+	res.SetHeader("Accept-Language", "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7")
+	res.SetHeader("cache-control", "max-age=0")
+	res.SetHeader("token", "")
+	res.SetHeader("Content-Type", "application/json")
+
+	return res
 }

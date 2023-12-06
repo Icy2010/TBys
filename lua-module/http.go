@@ -1,21 +1,34 @@
 package lua_module
 
 import (
-	. "github.com/Icy2010/TBys"
+	"github.com/go-resty/resty/v2"
 	lua "github.com/yuin/gopher-lua"
 	"os"
 )
 
 type TLuaHttpClient struct {
-	http *THttp
+	client *resty.Client
+	trace  bool
+}
+
+func (this *TLuaHttpClient) Request() *resty.Request {
+	if this.trace {
+		return this.client.R().EnableTrace()
+	}
+	return this.client.R()
+}
+
+func (this *TLuaHttpClient) Trace(L *lua.LState) int {
+	this.trace = L.ToBool(1)
+	return 0
 }
 
 func (this *TLuaHttpClient) Get(L *lua.LState) int {
 	res := ``
 	url := L.ToString(1)
 	if url != "" {
-		if buff, err := this.http.Get(url); err == nil {
-			res = string(buff)
+		if buff, err := this.Request().Get(url); err == nil {
+			res = buff.String()
 		}
 	}
 
@@ -28,8 +41,8 @@ func (this *TLuaHttpClient) Delete(L *lua.LState) int {
 	res := ``
 	url := L.ToString(1)
 	if url != "" {
-		if buff, err := this.http.Delete(url); err == nil {
-			res = string(buff)
+		if r, err := this.Request().Delete(url); err == nil {
+			res = r.String()
 		}
 	}
 
@@ -44,12 +57,12 @@ func (this *TLuaHttpClient) Put(L *lua.LState) int {
 	if url != "" {
 		table := L.ToTable(2)
 		if table != nil {
-			if buff, err := this.http.Put(url, LuaTableToMap(table)); err == nil {
-				res = string(buff)
+			if r, err := this.Request().SetFormData(LuaTableToMapString(table)).Put(url); err == nil {
+				res = r.String()
 			}
 		} else {
-			if buff, err := this.http.PutBuff(url, []byte(L.ToString(2))); err == nil {
-				res = string(buff)
+			if r, err := this.Request().SetBody([]byte(L.ToString(2))).Put(url); err == nil {
+				res = r.String()
 			}
 		}
 	}
@@ -64,12 +77,12 @@ func (this *TLuaHttpClient) Post(L *lua.LState) int {
 	if url != "" {
 		table := L.ToTable(2)
 		if table != nil {
-			if buff, err := this.http.Post(url, LuaTableToMap(table)); err == nil {
-				res = string(buff)
+			if r, err := this.Request().SetFormData(LuaTableToMapString(table)).Post(url); err == nil {
+				res = r.String()
 			}
 		} else {
-			if buff, err := this.http.PostBuff(url, []byte(L.ToString(2))); err == nil {
-				res = string(buff)
+			if r, err := this.Request().SetBody([]byte(L.ToString(2))).Post(url); err == nil {
+				res = r.String()
 			}
 		}
 	}
@@ -90,14 +103,14 @@ func (this *TLuaHttpClient) SetHeader(L *lua.LState) int {
 		data := LuaTableToMapString(table)
 		if len(data) > 0 {
 			for k, v := range data {
-				this.http.SetHeader(k, v)
+				this.Request().SetHeader(k, v)
 			}
 		}
 	} else {
 		k := L.ToString(1)
 		v := L.ToString(2)
 		if k != "" && v != "" {
-			this.http.SetHeader(k, v)
+			this.Request().SetHeader(k, v)
 		}
 	}
 
@@ -112,56 +125,28 @@ func (this *TLuaHttpClient) SetHeader(L *lua.LState) int {
 func (this *TLuaHttpClient) GetHeader(L *lua.LState) int {
 	k := L.ToString(1)
 	if k != "" {
-		L.Push(lua.LString(this.http.GetHeader(k)))
+		L.Push(lua.LString(this.Request().Header.Get(k)))
 	} else {
 		table := L.NewTable()
-		for k, v := range this.http.Header() {
-			table.RawSetString(k, lua.LString(v))
+		for k, v := range this.Request().Header {
+			table.RawSetString(k, lua.LString(v[0]))
 		}
 		L.Push(table)
 	}
 
 	return 1
 }
-
-func (this *TLuaHttpClient) HasHeader(L *lua.LState) int {
-	has := false
-	k := L.ToString(1)
-	if k != "" {
-		_, has = this.http.HasHeader(k)
-	}
-
-	L.Push(lua.LBool(has))
-	return 1
-}
-
-func (this *TLuaHttpClient) GZip(L *lua.LState) int {
-	if v, ok := L.Get(1).(lua.LBool); ok {
-		this.http.GZip = bool(v)
-	}
-
-	L.Push(lua.LBool(this.http.GZip))
-	return 1
-}
-
 func (this *TLuaHttpClient) Upload(L *lua.LState) int {
 	completed := false
-
 	url := L.ToString(1)
-	fileName := L.ToString(2)
-	if url != "" && PathExist(fileName) {
-		table := L.ToTable(3)
-		form := make(map[string]any)
-		if table != nil {
-			form = LuaTableToMap(table)
-		}
-		if buff, err := this.http.Upload(url, fileName, form); err == nil {
+	table := L.ToTable(2)
+	if url != "" && table != nil {
+		if r, err := this.Request().SetFiles(LuaTableToMapString(table)).Post(url); err == nil {
 			completed = true
-			L.Push(lua.LString(buff))
+			L.Push(lua.LString(r.String()))
 		} else {
 			L.Push(lua.LNil)
 		}
-
 	} else {
 		L.Push(lua.LNil)
 	}
@@ -176,11 +161,10 @@ func (this *TLuaHttpClient) Download(L *lua.LState) int {
 	url := L.ToString(1)
 	fileName := L.ToString(2)
 	if url != "" {
-		if buff, err := this.http.Get(url); err == nil {
+		if r, err := this.Request().Get(url); err == nil {
 			if f, err := os.Create(fileName); err == nil {
 				defer f.Close()
-				_, err = f.Write(buff)
-
+				_, err = f.Write(r.Body())
 				completed = err == nil
 			}
 		}
@@ -191,14 +175,14 @@ func (this *TLuaHttpClient) Download(L *lua.LState) int {
 }
 
 func (this *TLuaHttpClient) Proxy(L *lua.LState) int {
-	res := this.http.Proxy(L.ToString(1)) == nil
+	res := this.client.SetProxy(L.ToString(1)) == nil
 	L.Push(lua.LBool(res))
 	return 1
 }
 
 func HttpClientPreload(L *lua.LState) {
 	L.PreloadModule("httpClient", func(L *lua.LState) int {
-		HttpClient := &TLuaHttpClient{http: NewHTTP(nil)}
+		HttpClient := &TLuaHttpClient{client: resty.New()}
 
 		t := L.NewTable()
 		L.SetFuncs(t, map[string]lua.LGFunction{`get`: HttpClient.Get,
@@ -209,9 +193,8 @@ func HttpClientPreload(L *lua.LState) {
 			`download`:  HttpClient.Download,
 			`setHeader`: HttpClient.SetHeader,
 			`getHeader`: HttpClient.GetHeader,
-			`hasHeader`: HttpClient.HasHeader,
-			`gZip`:      HttpClient.GZip,
 			`proxy`:     HttpClient.Proxy,
+			`trace`:     HttpClient.Trace,
 		})
 
 		L.Push(t)

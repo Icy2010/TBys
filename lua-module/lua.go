@@ -15,7 +15,6 @@ const (
 	LPCTFile
 	LPFFMpeg
 	LPFileSystem
-	LPHtmlParser
 	LPHttpClient
 	LPIni
 	LPSql
@@ -48,8 +47,6 @@ func (this *TLStatePool) preloadDefault(L *lua.LState) {
 				FFMpegPreload(L)
 			case LPFileSystem:
 				FileSystemPreload(L)
-			case LPHtmlParser:
-				HtmlParserPreload(L)
 			case LPHttpClient:
 				HttpClientPreload(L)
 			case LPIni:

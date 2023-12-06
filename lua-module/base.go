@@ -19,7 +19,7 @@ type TBaseBysLua struct {
 }
 
 func (TBaseBysLua) Errorf(format string, val ...any) error {
-	return fmt.Errorf(format, val)
+	return fmt.Errorf(format, val...)
 }
 
 func (TBaseBysLua) LuaTableValueString(table *lua.LTable, key string, value *string) {
