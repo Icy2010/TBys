@@ -17,7 +17,7 @@ func (this *TTestLuaModule) GetName(L *lua.LState) int {
 }
 
 func Test_Main(t *testing.T) {
-	Pool := NewLStatePool(LPZipWriter, LPHttpClient, LPHtmlParser)
+	Pool := NewLStatePool(LPZipWriter, LPHttpClient)
 	state := Pool.Get()
 	if err := state.DoString(`local hParser = require('htmlParser')
 local http = require('httpClient')
