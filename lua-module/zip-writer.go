@@ -24,7 +24,10 @@ type TLuaZipWriter struct {
 func (this *TLuaZipWriter) addFile(L *lua.LState) int {
 	file := L.ToString(1)
 	if u.PathExist(file) {
-		name := u.ExtractFileName(file)
+		name := L.ToString(2)
+		if name == "" {
+			name = u.ExtractFileName(file)
+		}
 		this.files = append(this.files, TZipFileName{
 			Name: name,
 			Path: file,

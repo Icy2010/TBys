@@ -153,22 +153,6 @@ func (TBysLua) Replace(L *lua.LState) int {
 	return 1
 }
 
-func (TBysLua) Test(L *lua.LState) int {
-	fun := L.ToFunction(1)
-	//fun.Proto.Constants = append(fun.Proto.Constants, lua.LString("icy"))
-	//fun.Proto.Constants = append(fun.Proto.Constants, lua.LString("icy"))
-	//fun.Env.Append(lua.LString(`icy`))
-	//fun.Env.Append(lua.LNumber(0))
-
-	L.Push(lua.LString(`icy`))
-	L.Push(lua.LNumber(1000.1))
-	L.PCall(2, 0, fun)
-	i := L.GetTop()
-	L.Pop(i)
-	//L.GPCall(fun.GFunction, lua.LString(`icy`))
-	return 0
-}
-
 func (TBysLua) Sha1String(L *lua.LState) int {
 	val := L.ToString(1)
 	val = u.SHA1([]byte(val))

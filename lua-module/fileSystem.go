@@ -3,6 +3,7 @@ package lua_module
 import (
 	u "github.com/Icy2010/TBys"
 	lua "github.com/yuin/gopher-lua"
+	"io/fs"
 	"os"
 )
 
@@ -15,12 +16,15 @@ func (this *TLuaFileSystem) getFiles(L *lua.LState) int {
 
 	if u.PathExist(path) {
 		sf := u.TSearchFile{}
-		if err := sf.Search(path, func(fileName string) {
-			table.Append(lua.LString(fileName))
+		sf.Suffix = L.ToString(2)
+		if err := sf.Search(path, func(path string, info fs.FileInfo) bool {
+			if !info.IsDir() {
+				table.Append(lua.LString(path))
+			}
+			return false
 		}); err != nil {
 			u.Logger().Error(err)
 		}
-
 	}
 
 	L.Push(table)

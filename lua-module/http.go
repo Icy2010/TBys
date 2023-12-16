@@ -18,6 +18,59 @@ func (this *TLuaHttpClient) Request() *resty.Request {
 	return this.client.R()
 }
 
+/**
+ * @Author: icy
+ * @Description: http 请求返回的内容处理
+ * @Param lua 状态 回调函数的索引 http 返回的内容
+ * @return 字符串  如果不返回为空 侧将引向调用请求方法的返回内容
+ * @Date: 12/15/23 3:29 PM
+ */
+
+func (this *TLuaHttpClient) callResponseFunc(L *lua.LState, cbkIndex int, res *resty.Response) string {
+	cbk := L.ToFunction(cbkIndex)
+	if cbk != nil {
+		table := L.NewTable()
+		table.RawSetString(`statusCode`, lua.LNumber(res.StatusCode()))
+		table.RawSetString(`statusText`, lua.LString(res.Status()))
+		table.RawSetString(`size`, lua.LNumber(res.Size()))
+
+		THeader := L.NewTable()
+		list := res.Header()
+		if len(list) > 0 {
+			for key, val := range list {
+				THeader.RawSetString(key, lua.LString(val[0]))
+			}
+		}
+		table.RawSetString(`header`, THeader)
+
+		TCookie := L.NewTable()
+		cookies := res.Cookies()
+		if len(cookies) > 0 {
+			for _, P := range cookies {
+				TCookie.RawSetString(P.Name, lua.LString(P.Value))
+			}
+		}
+
+		table.RawSetString(`cookies`, TCookie)
+		table.RawSetString(`content`, lua.LString(res.Body()))
+		table.RawSetString(`time`, lua.LNumber(res.Time()))
+
+		if err := L.CallByParam(lua.P{
+			Fn:      cbk,
+			NRet:    0,
+			Protect: true,
+		}, table); err == nil {
+			r := L.Get(-1)
+			L.Pop(1)
+			if r.Type() == lua.LTString {
+				return lua.LVAsString(r)
+			}
+		}
+	}
+
+	return ``
+}
+
 func (this *TLuaHttpClient) Trace(L *lua.LState) int {
 	this.trace = L.ToBool(1)
 	return 0
@@ -27,8 +80,11 @@ func (this *TLuaHttpClient) Get(L *lua.LState) int {
 	res := ``
 	url := L.ToString(1)
 	if url != "" {
-		if buff, err := this.Request().Get(url); err == nil {
-			res = buff.String()
+		if result, err := this.Request().Get(url); err == nil {
+			res = this.callResponseFunc(L, 2, result)
+			if res == "" {
+				res = result.String()
+			}
 		}
 	}
 
@@ -42,7 +98,10 @@ func (this *TLuaHttpClient) Delete(L *lua.LState) int {
 	url := L.ToString(1)
 	if url != "" {
 		if r, err := this.Request().Delete(url); err == nil {
-			res = r.String()
+			res = this.callResponseFunc(L, 2, r)
+			if res == "" {
+				res = r.String()
+			}
 		}
 	}
 
@@ -58,13 +117,20 @@ func (this *TLuaHttpClient) Put(L *lua.LState) int {
 		table := L.ToTable(2)
 		if table != nil {
 			if r, err := this.Request().SetFormData(LuaTableToMapString(table)).Put(url); err == nil {
-				res = r.String()
+				res = this.callResponseFunc(L, 3, r)
+				if res == "" {
+					res = r.String()
+				}
 			}
 		} else {
 			if r, err := this.Request().SetBody([]byte(L.ToString(2))).Put(url); err == nil {
-				res = r.String()
+				res = this.callResponseFunc(L, 3, r)
+				if res == "" {
+					res = r.String()
+				}
 			}
 		}
+
 	}
 
 	L.Push(lua.LString(res))
@@ -78,11 +144,17 @@ func (this *TLuaHttpClient) Post(L *lua.LState) int {
 		table := L.ToTable(2)
 		if table != nil {
 			if r, err := this.Request().SetFormData(LuaTableToMapString(table)).Post(url); err == nil {
-				res = r.String()
+				res = this.callResponseFunc(L, 3, r)
+				if res == "" {
+					res = r.String()
+				}
 			}
 		} else {
 			if r, err := this.Request().SetBody([]byte(L.ToString(2))).Post(url); err == nil {
-				res = r.String()
+				res = this.callResponseFunc(L, 3, r)
+				if res == "" {
+					res = r.String()
+				}
 			}
 		}
 	}
@@ -143,6 +215,7 @@ func (this *TLuaHttpClient) Upload(L *lua.LState) int {
 	if url != "" && table != nil {
 		if r, err := this.Request().SetFiles(LuaTableToMapString(table)).Post(url); err == nil {
 			completed = true
+			this.callResponseFunc(L, 3, r)
 			L.Push(lua.LString(r.String()))
 		} else {
 			L.Push(lua.LNil)
@@ -166,6 +239,7 @@ func (this *TLuaHttpClient) Download(L *lua.LState) int {
 				defer f.Close()
 				_, err = f.Write(r.Body())
 				completed = err == nil
+				this.callResponseFunc(L, 3, r)
 			}
 		}
 	}
